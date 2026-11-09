@@ -126,12 +126,13 @@
       #wall .pic { width: 60px; padding: 4px 4px 15px; }
       #wall .pic::before { top: -7px; height: 12px; }
       #wall .pic::after { font-size: 9px; bottom: 2px; }
-      #wall .pic:nth-child(1) { left: 2% !important;  top: 1.5% !important; }
-      #wall .pic:nth-child(2) { left: 23% !important; top: 5% !important; }
-      #wall .pic:nth-child(3) { left: 1% !important;  top: 40% !important; }
-      #wall .pic:nth-child(4) { left: 60% !important; top: 1.5% !important; }
-      #wall .pic:nth-child(5) { left: 80% !important; top: 5% !important; }
-      #wall .pic:nth-child(6) { left: 81% !important; top: 42% !important; }
+      #stage { width: min(480px, 72vw); }            /* thu nhỏ ảnh chính để chừa chỗ cho tường ảnh */
+      #wall .pic:nth-child(1) { left: 3% !important;  top: 9% !important; }
+      #wall .pic:nth-child(2) { left: 27% !important; top: 12% !important; }
+      #wall .pic:nth-child(3) { left: 52% !important; top: 9% !important; }
+      #wall .pic:nth-child(4) { left: 76% !important; top: 12% !important; }
+      #wall .pic:nth-child(5) { left: 0% !important;  top: 38% !important; }
+      #wall .pic:nth-child(6) { left: 84% !important; top: 52% !important; }
       /* Hộp quà nằm gọn trong màn hình, phía trên dòng chúc */
       #gift { left: auto; right: 10px; bottom: calc(5vh + 104px); width: 84px; height: 90px; }
       #cardLayer { --pw: min(310px, 45vw); }
@@ -1115,10 +1116,19 @@
     const WALL_DELAY = 3400;       // sau khi bóng bay bay xong mới hiện ảnh (ms)
     const SWAP_MS = 4600;          // cứ chừng này thì mỗi khung đổi ảnh/kiểu cắt một lần
     // Các kiểu cắt: [tâm cắt, mức phóng to bắt đầu]; ảnh sẽ từ từ zoom thêm khi hiện
-    const CROPS = [
-      ['50% 35%', 1], ['50% 38%', 1.8], ['45% 30%', 1.3], ['50% 30%', 1.5],
-      ['55% 40%', 1.45], ['50% 36%', 1], ['50% 36%', 2.3], ['50% 60%', 1.2],
-    ];
+    // Điểm cần giữ trong khung (mặt/người) của từng ảnh, tính theo % chiều ngang, dọc. Ảnh mới chưa khai báo thì dùng mặc định.
+    // Khi cắt/zoom, ảnh luôn zoom vào điểm này nên không bị cắt mất mặt.
+    const FOCUS_DEFAULT = '50% 35%';
+    const FOCUS = {
+      'ao-dai-cay-dao.jpg': '64% 38%',
+      'ao-dai-san-vuon.jpg': '45% 33%',
+      'minion-bong-bay.jpg': '52% 50%',
+      'sinh-nhat-1.jpg': '35% 30%',
+      'sinh-nhat-2.jpg': '40% 35%',
+      'dao-cong-co.png': '55% 45%',
+      'san-gach-hoa.png': '31% 40%',
+    };
+    const ZOOMS = [1, 1.15, 1.3, 1.45];   // ảnh gốc nhỏ nên không zoom quá để khỏi vỡ nét
     // [trái %, trên %, góc nghiêng độ, bay vào từ (x, y)] — thưa, ba tấm mỗi bên
     const FRAMES = [
       [3, 9, -8, '-45vw', '-35vh'], [14, 40, 6, '-50vw', '10vh'], [4, 68, -5, '-45vw', '40vh'],
@@ -1140,27 +1150,36 @@
 
     // Gán ảnh + kiểu cắt cho một thẻ img; sau khi hiện thì zoom thêm chút (hiệu ứng Ken Burns)
     function setSlide(img, photo, crop) {
-      const [pos, zoom] = CROPS[crop % CROPS.length];
+      const zoom = ZOOMS[crop % ZOOMS.length];
+      const pos = FOCUS[PHOTOS[photo].split('/').pop()] || FOCUS_DEFAULT;
       img.src = PHOTOS[photo];
+      img.style.objectPosition = pos;
       img.style.transformOrigin = pos;
       img.style.transition = 'none';
       img.style.transform = `scale(${zoom})`;
       void img.offsetWidth;
       img.style.transition = '';
-      requestAnimationFrame(() => { img.style.transform = `scale(${zoom * 1.14})`; });
+      requestAnimationFrame(() => { img.style.transform = `scale(${zoom * 1.1})`; });
     }
 
-    // Chọn ảnh ngẫu nhiên, tránh trùng ảnh đang hiện trên các khung khác
+    // Chọn ảnh ngẫu nhiên theo kiểu "xáo bài": mỗi ảnh xuất hiện một lượt rồi mới xáo lại, nên ảnh nào cũng được lên đều,
+    // không có ảnh bị lặp liên tục; đồng thời tránh trùng với ảnh đang hiện ở các khung khác.
+    let deck = [];
     function pickPhoto(except) {
-      const pool = PHOTOS.map((_, k) => k).filter(k => !except.includes(k));
-      const list = pool.length ? pool : PHOTOS.map((_, k) => k);
-      return list[Math.floor(Math.random() * list.length)];
+      for (let tries = 0; tries < 2; tries++) {
+        for (let i = 0; i < deck.length; i++) {
+          if (!except.includes(deck[i])) return deck.splice(i, 1)[0];
+        }
+        deck = PHOTOS.map((_, k) => k).sort(() => Math.random() - 0.5);   // hết bài thì xáo lại
+      }
+      return Math.floor(Math.random() * PHOTOS.length);
     }
     function startWall() {
       const used = [];
+      deck = [];
       frames.forEach((f, i) => {
         f.photo = pickPhoto(used); used.push(f.photo);
-        f.crop = Math.floor(Math.random() * CROPS.length); f.cur = 0;
+        f.crop = Math.floor(Math.random() * ZOOMS.length); f.cur = 0;
         f.imgs.forEach(im => im.classList.remove('cur'));
         setSlide(f.imgs[0], f.photo, f.crop);
         f.imgs[0].classList.add('cur');
@@ -1168,7 +1187,7 @@
       clearInterval(swapTimer);
       swapTimer = setInterval(() => {
         frames.forEach((f, i) => setTimeout(() => {      // mỗi khung đổi lệch nhịp nhau
-          f.photo = pickPhoto(frames.map(g => g.photo)); f.crop = Math.floor(Math.random() * CROPS.length);
+          f.photo = pickPhoto(frames.map(g => g.photo)); f.crop = Math.floor(Math.random() * ZOOMS.length);
           const next = f.imgs[1 - f.cur];
           setSlide(next, f.photo, f.crop);
           next.classList.add('cur');
