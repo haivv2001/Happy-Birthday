@@ -13,6 +13,8 @@
       justify-content: center;
       background: #000;
     }
+    /* Lời chúc khi nổ pháo hoa: nằm trên ảnh và tường ảnh để luôn đọc được */
+    #wishes { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 15; pointer-events: none; }
     #rain {
       position: fixed;
       inset: 0;
@@ -494,6 +496,7 @@
     <img id="reveal" alt="">
   </div>
   <div id="wall"></div>
+  <canvas id="wishes"></canvas>
   <div id="greeting" aria-label="Chúc mừng sinh nhật em, người con gái anh yêu"></div>
   <button id="gift" aria-label="Mở quà">
     <span class="hint">Chạm để mở quà</span>
@@ -587,6 +590,8 @@
     // ---------- Nền động: sao pixel nhấp nháy, khi sang cảnh sinh nhật thì chuyển thành tiệc ----------
     const rain = document.getElementById('rain');
     const rctx = rain.getContext('2d');
+    const wishCanvas = document.getElementById('wishes');
+    const wctx = wishCanvas.getContext('2d');
     const bgEl = document.getElementById('bg');
     let stars = [], balloons = [], confetti = [], bokeh = [], rainLast = performance.now();
     let partyP = 0, partyTarget = 0;   // 0 = sao, 1 = tiệc sinh nhật (chuyển dần, không giật)
@@ -644,6 +649,7 @@
     function resizeRain() {
       rain.width = innerWidth * dpr();
       rain.height = innerHeight * dpr();
+      wishCanvas.width = rain.width; wishCanvas.height = rain.height;
       stars = Array.from({ length: STARS }, newStar);
       confetti = Array.from({ length: CONFETTI }, () => newConfetti(true));
       bokeh = Array.from({ length: 22 }, newBokeh);
@@ -831,25 +837,25 @@
         const pop = p < 0.15 ? 0.4 + 0.75 * (p / 0.15) : p < 0.25 ? 1.15 - 0.15 * ((p - 0.15) / 0.1) : 1;
         const fade = p < 0.1 ? p / 0.1 : p > 0.7 ? (1 - p) / 0.3 : 1;
         const size = Math.max(22, Math.min(46, rain.width / dpr() * 0.032)) * dpr();
-        rctx.save();
-        rctx.font = `700 ${size}px "Segoe Script", "Brush Script MT", "Lucida Handwriting", cursive`;
-        rctx.textAlign = 'center';
-        rctx.textBaseline = 'middle';
-        const half = rctx.measureText(w.text).width / 2 * pop + 10 * dpr();
+        wctx.save();
+        wctx.font = `700 ${size}px "Segoe Script", "Brush Script MT", "Lucida Handwriting", cursive`;
+        wctx.textAlign = 'center';
+        wctx.textBaseline = 'middle';
+        const half = wctx.measureText(w.text).width / 2 * pop + 10 * dpr();
         const x = Math.min(rain.width - half, Math.max(half, w.x));
         const y = w.y - p * 36 * dpr();
-        rctx.translate(x, y);
-        rctx.scale(pop, pop);
-        rctx.globalAlpha = Math.max(0, fade) * alpha;
-        rctx.lineJoin = 'round';
-        rctx.lineWidth = 4 * dpr();
-        rctx.strokeStyle = 'rgba(60,10,40,0.55)';
-        rctx.shadowColor = `hsl(${w.hue},100%,65%)`;
-        rctx.shadowBlur = 18 * dpr();
-        rctx.strokeText(w.text, 0, 0);
-        rctx.fillStyle = '#fff6e0';
-        rctx.fillText(w.text, 0, 0);
-        rctx.restore();
+        wctx.translate(x, y);
+        wctx.scale(pop, pop);
+        wctx.globalAlpha = Math.max(0, fade) * alpha;
+        wctx.lineJoin = 'round';
+        wctx.lineWidth = 6 * dpr();
+        wctx.strokeStyle = 'rgba(45,8,32,0.85)';
+        wctx.shadowColor = `hsl(${w.hue},100%,65%)`;
+        wctx.shadowBlur = 18 * dpr();
+        wctx.strokeText(w.text, 0, 0);
+        wctx.fillStyle = '#fff6e0';
+        wctx.fillText(w.text, 0, 0);
+        wctx.restore();
       });
       wishes = wishes.filter(w => w.delay > 0 || w.life < w.max);
     }
@@ -962,7 +968,6 @@
       });
       fireworks = fireworks.filter(p => p.life < p.max);
       rctx.globalCompositeOperation = 'source-over';
-      drawWishes(dt, alpha);
 
       // Pháo giấy bắn lên
       poppers.forEach(c => {
@@ -1014,8 +1019,9 @@
       bgEl.style.opacity = 0.3 + 0.7 * partyP;
 
       rctx.clearRect(0, 0, rain.width, rain.height);
+      wctx.clearRect(0, 0, wishCanvas.width, wishCanvas.height);
       drawStars(now, 1 - partyP);
-      if (partyP > 0.01) { drawParty(dt, now, partyP); drawFx(dt, now, partyP); }
+      if (partyP > 0.01) { drawParty(dt, now, partyP); drawFx(dt, now, partyP); drawWishes(dt, partyP); }
       rctx.globalAlpha = 1;
       requestAnimationFrame(rainFrame);
     }
