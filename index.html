@@ -121,7 +121,21 @@
     }
     @keyframes shine { 0%, 60% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
     @keyframes beat { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.45); } }
-    @media (max-width: 760px) { #wall { display: none; } }
+    /* Điện thoại: không ẩn tường ảnh nữa mà thu nhỏ và xếp lại vào dải trống phía trên và hai mép */
+    @media (max-width: 760px) {
+      #wall .pic { width: 60px; padding: 4px 4px 15px; }
+      #wall .pic::before { top: -7px; height: 12px; }
+      #wall .pic::after { font-size: 9px; bottom: 2px; }
+      #wall .pic:nth-child(1) { left: 2% !important;  top: 1.5% !important; }
+      #wall .pic:nth-child(2) { left: 23% !important; top: 5% !important; }
+      #wall .pic:nth-child(3) { left: 1% !important;  top: 40% !important; }
+      #wall .pic:nth-child(4) { left: 60% !important; top: 1.5% !important; }
+      #wall .pic:nth-child(5) { left: 80% !important; top: 5% !important; }
+      #wall .pic:nth-child(6) { left: 81% !important; top: 42% !important; }
+      /* Hộp quà nằm gọn trong màn hình, phía trên dòng chúc */
+      #gift { left: auto; right: 10px; bottom: calc(5vh + 104px); width: 84px; height: 90px; }
+      #cardLayer { --pw: min(310px, 45vw); }
+    }
 
     /* ----- Món quà: hiện ra sau khi gõ xong lời chúc, bấm vào để mở thiệp ----- */
     #gift {
